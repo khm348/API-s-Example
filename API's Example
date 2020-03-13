@@ -1,0 +1,68 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Web.Http;
+using System.Web.Script.Serialization;
+using System.Web.Script.Services;
+using test.Models;
+using test.Models.BAL;
+
+public class ServiceController : ApiController
+{
+[HttpPost]
+        [ScriptMethod(ResponseFormat = ResponseFormat.Json)]
+        public HttpResponseMessage Userlogout(CommonModel model)
+        {
+            try
+            {
+                string topicsObj = string.Empty;
+                if (ValidateToken(model.Token, out topicsObj))
+                {
+                    UserIdInput userIdInput = (UserIdInput)(new JavaScriptSerializer().Deserialize(topicsObj, typeof(UserIdInput)));
+                    if (!string.IsNullOrEmpty(userIdInput.UserID))
+                    {
+                        int status = UserBAL.Userlogout(userIdInput.UserID);
+                        if (status == 1)
+                        {
+                            return new HttpResponseMessage()
+                            {
+                                Content = new StringContent(Utility.EncryptOutput(new JavaScriptSerializer().Serialize(Utility.GetResponseMsgforSuccess(new StatusCode { Status = 1, SessionState = true }, "Success", topicsObj))))
+                            };
+                        }
+                        else
+                        {
+                            return new HttpResponseMessage()
+                            {
+                                Content = new StringContent(Utility.EncryptOutput(new JavaScriptSerializer().Serialize(Utility.GetResponseMsgforSuccess(new StatusCode { Status = 0, SessionState = true }, "Failed", topicsObj))))
+                            };
+                        }
+                    }
+                    else
+                    {
+                        return new HttpResponseMessage()
+                        {
+                            Content = new StringContent(Utility.EncryptOutput(new JavaScriptSerializer().Serialize(Utility.GetResponseMsgforSuccess(new StatusCode { Status = 0, SessionState = false }, "Input parameters should not empty", topicsObj))))
+                        };
+                    }
+                }
+                else
+                {
+                    return new HttpResponseMessage()
+                    {
+                        Content = new StringContent(Utility.EncryptOutput(new JavaScriptSerializer().Serialize(Utility.GetResponseMsg(new StatusCode { Status = -1, SessionState = false }, "", "Invalid Token", topicsObj))))
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                Utility.ExceptionLog("Service : Userlogout", Convert.ToString(ex.InnerException), Convert.ToString(ex.Message));
+                return new HttpResponseMessage()
+                {
+                    Content = new StringContent(Utility.EncryptOutput(new JavaScriptSerializer().Serialize(Utility.GetResponseMsg(new StatusCode { Status = 0, SessionState = false }, "", ex.Message, ""))))
+                };
+            }
+        }
+        }
